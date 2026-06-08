@@ -21,6 +21,6 @@ python3 dataset/*_download_pyg.py
 # Generate test data
 python3 dataset/*/*_data.py
 
-# MoA Pre-training and Searching
+# Offline agent pre-training and online agent collaboration
 bash run.sh
 ```
