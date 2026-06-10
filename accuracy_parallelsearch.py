@@ -198,13 +198,8 @@ def parallel_search(
         # ==========================================================
         # Step 7: final candidate pool + final top-k
         # ==========================================================
-        final_pool = _topk_indices(final_score, adaptive_candidate_k)
-        final_pool_score = final_score[final_pool]
-
-        final_k = min(target_k, final_pool.numel())
-        final_nodes_local = _topk_indices(final_pool_score, final_k)
-        final_nodes = final_pool[final_nodes_local]
-
+        final_k = min(target_k, final_score.numel())
+        final_nodes = _topk_indices(final_score, final_k)
         final_nodes = torch.unique(final_nodes, sorted=False)
 
         preds[i, final_nodes] = 1.0
@@ -236,19 +231,19 @@ def parallel_search(
         f"Searching Time: {t_search:.4f}"
     )
 
-    file_path = f"logs_final/{args.dataset}.log"
-    print(file_path)
-    if not os.path.exists(file_path):
-        with open(file_path, 'w') as file:
-            print("Create Logs")
+    # file_path = f"logs_final/{args.dataset}.log"
+    # print(file_path)
+    # if not os.path.exists(file_path):
+    #     with open(file_path, 'w') as file:
+    #         print("Create Logs")
     
-    with open(file_path, 'a') as file:
-        file.write(f'Parallel Args: {args}\n')
-        file.write('----------------------------------------------\n')
-        file.write(f'[Top-{target_k}] F1: {f1_total:.4f} | NMI: {nmi_total:.4f} | JAC: {jac_total:.4f}\n')
-        file.write(f'Parallel Search Time: {t_search:.4f} s\n')
-        file.write('==============================================\n\n')
-        print("Final Logs Write Successful")
+    # with open(file_path, 'a') as file:
+    #     file.write(f'Parallel Args: {args}\n')
+    #     file.write('----------------------------------------------\n')
+    #     file.write(f'[Top-{target_k}] F1: {f1_total:.4f} | NMI: {nmi_total:.4f} | JAC: {jac_total:.4f}\n')
+    #     file.write(f'Parallel Search Time: {t_search:.4f} s\n')
+    #     file.write('==============================================\n\n')
+    #     print("Final Logs Write Successful")
 
 if __name__ == "__main__":
     args = parse_args()
