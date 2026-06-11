@@ -16,10 +16,10 @@ scipy==1.11.2
 You can run our code with:
 ```
 # Download dataset for both stages
-python3 dataset/*_download_pyg.py
+python3 dataset/*_download_pyg.py (Download datasets from PyG or OGB follow the same process)
 
 # Generate test data
-python3 dataset/*/*_data.py
+python3 dataset/*/*_data.py (Generate splits for datasets follow the same process)
 
 # Offline agent pre-training and online agent collaboration
 bash run.sh
