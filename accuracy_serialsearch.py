@@ -152,7 +152,6 @@ def serial_search(
             for agent_name, aux_global in agent_scores_global.items():
                 pool_aux = aux_global[pool]
                 cur_bias = torch.abs(pool_aux - pool_cur).mean()
-                # rev_bias = torch.abs(pool_aux - pool_rev).mean()
                 rev_bias = agent_overlap[agent_name]
 
                 select_score = cur_bias * rev_bias

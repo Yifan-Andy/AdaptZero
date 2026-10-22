@@ -26,24 +26,18 @@ if __name__ == "__main__":
 
     # process feature
     start_feature_processing = time.time()
-    feature_path = f"checkpoints/processed_features/{args.dataset}_adj.pt"
-    if not os.path.exists(feature_path):
-        # get deepwalk feature from edges
-        adj_c = adj.coalesce()
-        row, col = adj_c.indices()
-        edges = list(zip(row.tolist(), col.tolist()))
-        if args.dataset in ["reddit", "products"]:
-            features = torch.load(f"./dataset/{args.dataset}/deepwalk_{args.dataset}.pt")
-        else:
-            features = deepwalk_from_edges(edges, num_nodes=adj.size(0))
 
-        # process feature with hops
-        processed_features = utils.re_features(adj, features, args.hops)  # return (N, hops+1, d)
-        torch.save(processed_features, feature_path)
-        print("feature saved")
+    # get deepwalk feature from edges
+    adj_c = adj.coalesce()
+    row, col = adj_c.indices()
+    edges = list(zip(row.tolist(), col.tolist()))
+    if args.dataset in ["reddit", "products"]:
+        features = torch.load(f"./dataset/{args.dataset}/deepwalk_{args.dataset}.pt")
     else:
-        processed_features = torch.load(feature_path)
-        print("feature process from saved checkpoint")
+        features = deepwalk_from_edges(edges, num_nodes=adj.size(0))
+
+    # process feature with hops
+    processed_features = utils.re_features(adj, features, args.hops)  # return (N, hops+1, d)
 
     t_feature_precessing = time.time() - start_feature_processing
     print("feature process time: {:.4f}s".format(t_feature_precessing))

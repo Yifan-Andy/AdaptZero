@@ -26,21 +26,15 @@ if __name__ == "__main__":
 
     # process feature
     start_feature_processing = time.time()
-    feature_path = f"checkpoints/processed_features/{args.dataset}_x.pt"
-    if not os.path.exists(feature_path):
-        # get knn edges from features
-        if features.shape[0] < 1000000:
-            adj = build_knn_sparse_adj(features)
-        else:
-            adj = build_knn_sparse_adj_batch(features, args.device)
 
-        # process feature with hops
-        processed_features = utils.re_features(adj, features, args.hops)  # return (N, hops+1, d)
-        torch.save(processed_features, feature_path)
-        print("feature saved")
+    # get knn edges from features
+    if features.shape[0] < 1000000:
+        adj = build_knn_sparse_adj(features)
     else:
-        processed_features = torch.load(feature_path)
-        print("feature process from saved checkpoint")
+        adj = build_knn_sparse_adj_batch(features, args.device)
+
+    # process feature with hops
+    processed_features = utils.re_features(adj, features, args.hops)  # return (N, hops+1, d)
 
     t_feature_precessing = time.time() - start_feature_processing
     print("feature process time: {:.4f}s".format(t_feature_precessing))

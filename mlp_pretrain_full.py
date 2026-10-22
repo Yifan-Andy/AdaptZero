@@ -26,15 +26,9 @@ if __name__ == "__main__":
 
     # process feature
     start_feature_processing = time.time()
-    feature_path = f"checkpoints/processed_features/{args.dataset}_full.pt"
-    if not os.path.exists(feature_path):
-        # process feature with hops
-        processed_features = utils.re_features(adj, features, args.hops)  # return (N, hops+1, d)
-        torch.save(processed_features, feature_path)
-        print("feature saved")
-    else:
-        processed_features = torch.load(feature_path)
-        print("feature process from saved checkpoint")
+
+    # process feature with hops
+    processed_features = utils.re_features(adj, features, args.hops)  # return (N, hops+1, d)
 
     t_feature_precessing = time.time() - start_feature_processing
     print("feature process time: {:.4f}s".format(t_feature_precessing))
