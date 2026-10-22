@@ -1,11 +1,9 @@
-import torch
 import os
+import time
+import torch
 import argparse
 import numpy as np
-import time
 import torch.nn.functional as F
-import math
-import ast
 from utils import load_query_n_gt
 from sklearn.metrics import f1_score, normalized_mutual_info_score, jaccard_score
 
@@ -24,7 +22,7 @@ def parse_args():
     parser.add_argument('--embedding_path', type=str, default='./pretrain_result/', help='embedding path')
 
     # search parameters
-    parser.add_argument('--max_rounds', type=int, default=10, help='')
+    parser.add_argument('--max_rounds', type=int, default=9, help='')
 
     return parser.parse_args()
 
@@ -35,20 +33,11 @@ def build_query_feat(query, emb):
     query_feat = F.normalize(query_feat, p=2, dim=1)
     return query_feat
 
-def score_to_prob(score, tau=0.1):
-    prob = torch.softmax(score / tau, dim=0)
-    return prob
-
 def _safe_zscore(x):
     std = x.std()
     if std < EPSILON:
         return x - x.mean()
     return (x - x.mean()) / (std + EPSILON)
-
-def softmax(x):
-    exp_x = [math.exp(i) for i in x]
-    sum_exp = sum(exp_x)
-    return [i / sum_exp for i in exp_x]
 
 def serial_search(
     full_emb,
@@ -142,23 +131,17 @@ def serial_search(
             "adj": overlap_adj,
         }
 
-        agent_used_count = {
-            "full": 0,
-            "x": 0,
-            "adj": 0,
-        }
-
         # current_score_global = rev_global.clone()
         current_score_global = (full_global + x_global + adj_global) / 3.0
         pool = _topk_indices(current_score_global, adaptive_candidate_k)
 
-        chosen_path = ["fusion(the stable init)"]
+        chosen_path = ["fusion(the collaboration init)"]
         old_pool = None
 
         # ==========================================================
         # Step 3: first choose agent, then update only once
         # ==========================================================
-        for _ in range(max_rounds - 1):
+        for t in range(1, max_rounds + 1):
             # ---------- A. lightweight agent choose with reverse ----------
             best_agent = None
             best_select = None
@@ -172,21 +155,16 @@ def serial_search(
                 # rev_bias = torch.abs(pool_aux - pool_rev).mean()
                 rev_bias = agent_overlap[agent_name]
 
-                # 所有round共享的衰减权重：出现越多，权重越低
-                usage_weight = 1.0 / (1.0 + agent_used_count[agent_name])
-
-                select_score = cur_bias * rev_bias * usage_weight
+                select_score = cur_bias * rev_bias
 
                 if best_select is None or select_score > best_select:
                     best_select = select_score
                     best_agent = agent_name
 
             # ---------- B. only update pool and scores with best_agent ----------
-            usage_weight = 1.0 / (1.0 + agent_used_count[best_agent])
             redundancy = max(1, adaptive_candidate_k - target_k)
-            buffer_swap_k = int(np.ceil(np.sqrt(redundancy)))
-            # size for prune and expand
-            swap_k = max(1, int(buffer_swap_k * usage_weight))
+            base_swap_k = int(np.ceil(np.sqrt(redundancy)))
+            swap_k = max(1, int(base_swap_k / t))
 
             aux_global = agent_scores_global[best_agent]
 
@@ -230,8 +208,6 @@ def serial_search(
                 f"{best_agent}(pool = {pool.shape[0]}, swap = {swap_k}, update = {(~torch.isin(pool, old_pool)).sum().item()})"
             )
 
-            agent_used_count[best_agent] += 1
-
         # ==========================================================
         # Step 4: final top-k from current dynamic pool
         # ==========================================================
@@ -241,8 +217,6 @@ def serial_search(
         final_nodes = pool[final_nodes_local]
 
         final_nodes = torch.unique(final_nodes, sorted=False)
-        global_fill_mask = torch.ones(num_nodes, dtype=torch.bool, device=device)
-        global_fill_mask[final_nodes] = False
 
         preds[i, final_nodes] = 1.0
         labels_part[i, final_nodes] = labels[i, final_nodes].to(device)
@@ -268,20 +242,6 @@ def serial_search(
         f"Avg. Overlap: {avg_overlap:.4f} | "
         f"Searching Time: {t_search:.4f}"
     )
-
-    # file_path = f"logs_final/{args.dataset}.log"
-    # print(file_path)
-    # if not os.path.exists(file_path):
-    #     with open(file_path, 'w') as file:
-    #         print("Create Logs")
-    
-    # with open(file_path, 'a') as file:
-    #     file.write(f'Serial Args: {args}\n')
-    #     file.write('----------------------------------------------\n')
-    #     file.write(f'[Top-{target_k}] F1: {f1_total:.4f} | NMI: {nmi_total:.4f} | JAC: {jac_total:.4f}\n')
-    #     file.write(f'Serial Search Time: {t_search:.4f} s\n')
-    #     file.write('==============================================\n\n')
-    #     print("Final Logs Write Successful")
 
 if __name__ == "__main__":
     args = parse_args()

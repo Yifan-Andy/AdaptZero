@@ -143,16 +143,3 @@ if __name__ == "__main__":
             node_embedding = np.concatenate((node_embedding, new_node_embedding), axis=0)
     
     np.save(args.embedding_path + args.dataset + '_mlp_stable.npy', node_embedding)
-
-    # file_path = f"logs_final/{args.dataset}.log"
-    # print(file_path)
-    # if not os.path.exists(file_path):
-    #     with open(file_path, 'w') as file:
-    #         print("Create Logs")
-    
-    # with open(file_path, 'a') as file:
-    #     file.write(f'STABLE Args: {args}\n')
-    #     file.write('----------------------------------------------\n')
-    #     file.write(f'Train Time: {t_train} s\n')
-    #     file.write('==============================================\n\n')
-    #     print("Final Logs Write Successful")

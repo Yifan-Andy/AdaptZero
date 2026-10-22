@@ -1,5 +1,7 @@
+/__pycache__/
 /checkpoints/
 /model/
 /pretrain_result/
 /logs/
 /scripts/
+/checkpoints/

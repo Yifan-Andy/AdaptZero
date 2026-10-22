@@ -4,12 +4,9 @@ import argparse
 import numpy as np
 import time
 import torch.nn.functional as F
-import math
-import ast
 from utils import load_query_n_gt
 from sklearn.metrics import f1_score, normalized_mutual_info_score, jaccard_score
 
-LOG_PATH = "logs/statistics.log"
 EPSILON = 1e-8
 
 def parse_args():
@@ -36,20 +33,11 @@ def build_query_feat(query, emb):
     query_feat = F.normalize(query_feat, p=2, dim=1)
     return query_feat
 
-def score_to_prob(score, tau=0.1):
-    prob = torch.softmax(score / tau, dim=0)
-    return prob
-
 def _safe_zscore(x):
     std = x.std()
     if std < EPSILON:
         return x - x.mean()
     return (x - x.mean()) / (std + EPSILON)
-
-def softmax(x):
-    exp_x = [math.exp(i) for i in x]
-    sum_exp = sum(exp_x)
-    return [i / sum_exp for i in exp_x]
 
 def parallel_search(
     full_emb,
@@ -198,8 +186,13 @@ def parallel_search(
         # ==========================================================
         # Step 7: final candidate pool + final top-k
         # ==========================================================
-        final_k = min(target_k, final_score.numel())
-        final_nodes = _topk_indices(final_score, final_k)
+        final_pool = _topk_indices(final_score, adaptive_candidate_k)
+        final_pool_score = final_score[final_pool]
+
+        final_k = min(target_k, final_pool.numel())
+        final_nodes_local = _topk_indices(final_pool_score, final_k)
+        final_nodes = final_pool[final_nodes_local]
+
         final_nodes = torch.unique(final_nodes, sorted=False)
 
         preds[i, final_nodes] = 1.0
@@ -230,20 +223,6 @@ def parallel_search(
         f"Avg. Overlap: {avg_overlap:.4f} | "
         f"Searching Time: {t_search:.4f}"
     )
-
-    # file_path = f"logs_final/{args.dataset}.log"
-    # print(file_path)
-    # if not os.path.exists(file_path):
-    #     with open(file_path, 'w') as file:
-    #         print("Create Logs")
-    
-    # with open(file_path, 'a') as file:
-    #     file.write(f'Parallel Args: {args}\n')
-    #     file.write('----------------------------------------------\n')
-    #     file.write(f'[Top-{target_k}] F1: {f1_total:.4f} | NMI: {nmi_total:.4f} | JAC: {jac_total:.4f}\n')
-    #     file.write(f'Parallel Search Time: {t_search:.4f} s\n')
-    #     file.write('==============================================\n\n')
-    #     print("Final Logs Write Successful")
 
 if __name__ == "__main__":
     args = parse_args()
